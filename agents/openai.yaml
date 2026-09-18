@@ -1,0 +1,7 @@
+interface:
+  display_name: "Execution Plan Integrity"
+  short_description: "Enforce one trustworthy execution-plan source"
+  default_prompt: "Use $execution-plan-integrity to audit this repository's execution-plan authority and identify one unambiguous next task."
+
+policy:
+  allow_implicit_invocation: true

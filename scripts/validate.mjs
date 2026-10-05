@@ -78,7 +78,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     if (!description.includes(term)) problems.push(`SKILL.md description must name ${term}`)
   }
 
-  for (const mode of ['audit', 'apply', 'verify']) {
+  for (const mode of ['audit', 'apply', 'close', 'verify']) {
     const matches = skill.match(new RegExp(`^## Mode: ${mode}$`, 'gm')) ?? []
     if (matches.length !== 1) problems.push(`SKILL.md must define Mode: ${mode} exactly once`)
   }
@@ -108,6 +108,13 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     '`validation`',
     '`design`',
     '`archive`',
+    '`IMPLEMENTATION`',
+    '`MIGRATION`',
+    '`OPERATIONS`',
+    '`DESIGN`',
+    '`DECISION`',
+    '`VALIDATION`',
+    '`DOCUMENTATION`',
     '`DONE`',
     '`NOW`',
     '`QUEUED`',
@@ -126,6 +133,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const migration = readFileSync(join(root, 'references/migration.md'), 'utf8')
   for (const heading of [
+    '## Deterministic apply state machine',
+    '## Deterministic task-kind classification',
     '## 1. Freeze the authority graph',
     '## 2. Build the crosswalk',
     '## 3. Select the authority',
@@ -142,6 +151,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     '## Authority graph',
     '## State-bearing locations',
     '## Lossless crosswalk',
+    '## Completion integrity',
+    '## Existing DONE proof readiness',
     '## Proposed canonical register',
     '## Enforcement integration',
     '## Decision required',

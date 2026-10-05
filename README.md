@@ -7,11 +7,13 @@ mechanically enforced execution authority without discarding their history.
 
 - one canonical execution register;
 - permanent semantic task IDs;
-- exactly one `NOW` task;
+- an explicit kind for every task;
+- exactly one `NOW` task, a justified `IDLE` state, or a terminal `NONE` state;
 - closed states: `DONE`, `NOW`, `QUEUED`, `OPEN`, and `DEFERRED`;
+- a requirement-level closure proof for every `DONE` task;
 - explicit roles for every plan-like document;
 - a lossless crosswalk before migration; and
-- mutation-tested enforcement inside the repository's existing validation path.
+- mutation-tested enforcement owned by the installed skill and never copied into the target.
 
 The skill never chooses product priority or silently resolves contradictory sources. Audit is read-only
 and ends at a maintainer decision before apply.
@@ -20,7 +22,7 @@ and ends at a maintainer decision before apply.
 
 - Node.js 22 or newer;
 - execution state stored in Markdown or MDX; and
-- an existing validation path, or explicit approval to add one.
+- permission to add a root `.execution-plan-integrity.json` data file.
 
 The application framework and package manager do not matter.
 
@@ -32,9 +34,11 @@ agents/openai.yaml                           Codex UI metadata
 references/contract.md                       Closed roles, states, and invariants
 references/migration.md                      Lossless migration procedure
 references/report-template.md                Audit and verification report
-assets/checker/check-execution-plan.mjs       Adaptable repository checker
+references/completion-proof.md               Semantic completion-proof protocol
+assets/checker/check-execution-plan.mjs       Skill-owned repository checker
+assets/checker/completion-proof.mjs           Completion-proof checker
 assets/checker/execution-register.mjs         Stable register parser
-assets/checker/execution-register.test.mjs    Mutation-test template
+assets/checker/execution-register.test.mjs    Skill-owned mutation suite
 scripts/install.mjs                           Safe global copy
 scripts/validate.mjs                          Package validator
 tests/skill.test.mjs                          Validator and installer regressions
@@ -71,6 +75,7 @@ Codex skill packaging follows the official [Build skills documentation](https://
 ```text
 $execution-plan-integrity audit
 $execution-plan-integrity apply
+$execution-plan-integrity close
 $execution-plan-integrity verify
 ```
 

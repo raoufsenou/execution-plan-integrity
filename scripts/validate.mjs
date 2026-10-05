@@ -74,7 +74,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
   if (description.length === 0 || description.length > 1024) {
     problems.push('SKILL.md description must contain 1–1024 characters')
   }
-  for (const term of ['execution plan', 'Node', 'Markdown']) {
+  for (const term of ['execution plan', 'Node', 'completion proofs']) {
     if (!description.includes(term)) problems.push(`SKILL.md description must name ${term}`)
   }
 
@@ -84,7 +84,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
   }
   for (const invariant of [
     'Never combine `audit` and `apply` in one uninterrupted pass. An audit ends at a user decision.',
-    'Do not advance `NOW`, close a task, or schedule an `OPEN` item merely because the documentation was restructured.',
+    'Do not advance `NOW`, close a task, or schedule an `OPEN` item merely because documentation was restructured.',
     'Report `UNSUPPORTED PROFILE` and stop when Node.js 22 cannot be part of the repository\'s validation environment.',
   ]) {
     if (!includesNormalized(skill, invariant)) problems.push(`SKILL.md must preserve: ${invariant}`)
@@ -92,8 +92,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const verifySection = skill.slice(skill.indexOf('## Mode: verify'), skill.indexOf('## Stop conditions'))
   const verificationNumbers = [...verifySection.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1]))
-  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 10 }, (_, i) => i + 1))) {
-    problems.push('SKILL.md verification matrix must contain ordered proofs 1–10')
+  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 14 }, (_, i) => i + 1))) {
+    problems.push('SKILL.md verification matrix must contain ordered proofs 1–14')
   }
   for (const proof of SKILL_VERIFICATION_PROOFS) {
     if (!includesNormalized(skill, proof)) {
@@ -118,7 +118,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
   }
   for (const invariant of [
     'Exactly one plan-like document has role `canonical`.',
-    'There is exactly one `NOW` pointer and one `NOW` row.',
+    'The `NOW` pointer has exactly three valid forms:',
     'No item disappears because it was duplicated, stale, inconvenient, or outside the former sequence.',
   ]) {
     if (!includesNormalized(contract, invariant)) problems.push(`contract.md must preserve: ${invariant}`)
@@ -130,8 +130,9 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     '## 2. Build the crosswalk',
     '## 3. Select the authority',
     '## 4. Migrate without reprioritizing',
-    '## 5. Adapt the checker',
-    '## 6. Prove failure, then success',
+    '## 5. Configure the skill-owned checker',
+    '## 6. Reconstruct completion proofs',
+    '## 7. Prove failure, then success',
   ]) {
     if (!migration.includes(heading)) problems.push(`migration.md must define ${heading}`)
   }
@@ -156,7 +157,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const checker = readFileSync(join(root, 'assets/checker/check-execution-plan.mjs'), 'utf8')
   const parser = readFileSync(join(root, 'assets/checker/execution-register.mjs'), 'utf8')
-  for (const proof of ['requiredGlobs', 'execution-role:', 'proposed sequencing', 'checkExecutionRegisterText']) {
+  for (const proof of ['requiredGlobs', 'execution-role:', 'proposed sequencing', 'parseExecutionRegisterText']) {
     if (!checker.includes(proof)) problems.push(`checker template must preserve ${proof}`)
   }
   for (const proof of ['REGISTER_START', 'repeats execution ID', 'first incomplete task', 'has no completion date']) {
@@ -166,7 +167,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
   const openai = readFileSync(join(root, 'agents/openai.yaml'), 'utf8')
   for (const value of [
     'display_name: "Execution Plan Integrity"',
-    'short_description: "Enforce one trustworthy execution-plan source"',
+    'short_description: "Enforce trustworthy plans and DONE proofs"',
     'default_prompt: "Use $execution-plan-integrity',
     'allow_implicit_invocation: true',
   ]) {

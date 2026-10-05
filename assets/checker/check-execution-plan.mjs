@@ -1,17 +1,24 @@
 #!/usr/bin/env node
 
 import { existsSync, globSync, readFileSync } from 'node:fs'
-import { isAbsolute, join, normalize, sep } from 'node:path'
+import { isAbsolute, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { checkCompletionProofs } from './completion-proof.mjs'
 import {
-  checkExecutionRegisterText,
+  parseExecutionRegisterText,
   REGISTER_END,
   REGISTER_START,
 } from './execution-register.mjs'
 
 const ROLES = new Set(['evidence', 'validation', 'design', 'archive'])
 const ROLE_MARKER = /execution-role: (canonical|evidence|validation|design|archive)/g
-const DEFAULT_CONFIG = 'tools/execution-plan/config.json'
+const DEFAULT_CONFIG = '.execution-plan-integrity.json'
+const LOCAL_IMPLEMENTATION_GLOBS = [
+  '**/check-execution-plan.{js,mjs,cjs,ts}',
+  '**/execution-register.{js,mjs,cjs,ts}',
+  '**/completion-proof.{js,mjs,cjs,ts}',
+  '**/execution-plan-integrity.test.{js,mjs,cjs,ts,tsx}',
+]
 
 function portable(path) {
   return path.split(sep).join('/')
@@ -42,9 +49,16 @@ export function readExecutionConfig(root, configPath = DEFAULT_CONFIG) {
   } catch (error) {
     throw new Error(`Cannot read execution-plan config ${relativeConfig}: ${error.message}`)
   }
-  if (config?.schema !== 1) throw new Error('Execution-plan config schema must be 1.')
+  if (config?.schema !== 2) throw new Error('Execution-plan config schema must be 2.')
   const canonical = safeRelativePath(config.canonical, 'Canonical path')
   const requiredGlobs = stringList(config.requiredGlobs, 'requiredGlobs')
+  if (!config.completionProofs || typeof config.completionProofs !== 'object' || Array.isArray(config.completionProofs)) {
+    throw new Error('completionProofs must be an object.')
+  }
+  const completionProofDirectory = safeRelativePath(
+    config.completionProofs.directory,
+    'completionProofs.directory',
+  )
   if (!config.roles || typeof config.roles !== 'object' || Array.isArray(config.roles)) {
     throw new Error('roles must be an object keyed by execution role.')
   }
@@ -53,7 +67,7 @@ export function readExecutionConfig(root, configPath = DEFAULT_CONFIG) {
     if (!ROLES.has(role)) throw new Error(`Unknown execution role in config: ${role}`)
     roles[role] = stringList(patterns, `roles.${role}`)
   }
-  return { canonical, requiredGlobs, roles }
+  return { canonical, requiredGlobs, roles, completionProofDirectory }
 }
 
 function matches(root, patterns) {
@@ -71,6 +85,11 @@ export function checkExecutionProject({ root = process.cwd(), configPath = DEFAU
 
   if (!existsSync(join(root, config.canonical))) {
     return [`Canonical execution document does not exist: ${config.canonical}`]
+  }
+
+  for (const path of matches(root, LOCAL_IMPLEMENTATION_GLOBS)) {
+    if (path.startsWith('node_modules/')) continue
+    findings.push(`${path} duplicates the global execution-plan-integrity implementation`)
   }
 
   const required = matches(root, config.requiredGlobs)
@@ -111,14 +130,30 @@ export function checkExecutionProject({ root = process.cwd(), configPath = DEFAU
   }
 
   const canonicalText = readFileSync(join(root, config.canonical), 'utf8')
-  findings.push(...checkExecutionRegisterText(canonicalText, config.canonical))
+  const register = parseExecutionRegisterText(canonicalText, config.canonical)
+  findings.push(...register.findings)
+  findings.push(...checkCompletionProofs({
+    root,
+    directory: config.completionProofDirectory,
+    rows: register.all,
+  }))
   return findings
 }
 
 export function commandPlan(args) {
-  if (args.length === 0) return { configPath: DEFAULT_CONFIG }
-  if (args.length === 1 && !args[0].startsWith('-')) return { configPath: args[0] }
-  throw new Error(`Usage: node ${DEFAULT_CONFIG.replace('/config.json', '/check-execution-plan.mjs')} [config-path]`)
+  let root = process.cwd()
+  let configPath = DEFAULT_CONFIG
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index]
+    const value = args[index + 1]
+    if (!value || value.startsWith('-')) {
+      throw new Error('Usage: node check-execution-plan.mjs [--root repository] [--config repository-relative-path]')
+    }
+    if (flag === '--root') root = resolve(value)
+    else if (flag === '--config') configPath = value
+    else throw new Error('Usage: node check-execution-plan.mjs [--root repository] [--config repository-relative-path]')
+  }
+  return { root, configPath }
 }
 
 function main() {
@@ -129,12 +164,12 @@ function main() {
     process.stderr.write(`${error.message}\n`)
     return 2
   }
-  const findings = checkExecutionProject({ root: process.cwd(), configPath: plan.configPath })
+  const findings = checkExecutionProject({ root: plan.root, configPath: plan.configPath })
   if (findings.length > 0) {
     process.stderr.write(`Execution-plan integrity failed:\n${findings.map((finding) => `- ${finding}`).join('\n')}\n`)
     return 1
   }
-  const config = readExecutionConfig(process.cwd(), plan.configPath)
+  const config = readExecutionConfig(plan.root, plan.configPath)
   process.stdout.write(`Execution-plan integrity passed: ${config.canonical}\n`)
   return 0
 }

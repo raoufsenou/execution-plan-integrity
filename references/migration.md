@@ -172,7 +172,8 @@ Use these legacy-proof rules consistently:
 ## 7. Prove failure, then success
 
 Run the mutation tests. They must demonstrate rejection of duplicate IDs, multiple `NOW` rows, a pointer
-mismatch, a queued item before the current item, an unclassified document, and a noncanonical register.
+mismatch, a queued item before the current item, an unclassified document, a noncanonical register, and
+stray text inside the register.
 
 Also demonstrate rejection of a missing closure proof, mismatched task kind, nonexistent evidence path,
 unverified acceptance item, implementation task without integration/falsification, design completion

@@ -166,7 +166,7 @@ test('rejects a mixed-version row with no v2 task kind', () => {
   assert.ok(findings.includes('execution plan task TASK-ONE has invalid kind DONE'))
 })
 
-test('ignores supporting tables inside the bounded register', () => {
+test('rejects supporting tables inside the bounded register', () => {
   const text = register([
     '| 1 | `TASK-TWO` | `IMPLEMENTATION` | `NOW` | Current. | Finding. |',
   ]).replace(
@@ -176,7 +176,32 @@ test('ignores supporting tables inside the bounded register', () => {
       + '| 1 | `SUBSTEP-ONE` | Completed 2026-09-18 | Historical detail. |\n\n'
       + '| Order | ID | Kind | State | Work | Source or evidence |',
   )
-  assert.deepEqual(checkExecutionRegisterText(text), [])
+  assert.deepEqual(checkExecutionRegisterText(text), [
+    'execution plan has text inside the execution register that is not the NOW pointer, IDLE metadata, or a task-table row at line(s) 5-7',
+  ])
+})
+
+test('rejects notes, headings, and prose inside the bounded register', () => {
+  const text = register(
+    ['| 1 | `TASK-TWO` | `IMPLEMENTATION` | `NOW` | Current. | Finding. |'],
+    'TASK-TWO',
+    '| `TASK-LATER` | `VALIDATION` | `DEFERRED` | Later work. | Revisit by decision. |',
+    '`CURRENT SUBSTEP`: Wire the route.\n\nEarlier sessions moved the handler twice.',
+  ).replace('\n| ID | Kind |', '\n### Open and deferred\n\n| ID | Kind |')
+  assert.deepEqual(checkExecutionRegisterText(text), [
+    'execution plan has text inside the execution register that is not the NOW pointer, IDLE metadata, or a task-table row at line(s) 4-6, 11',
+  ])
+})
+
+test('rejects a task-table row whose ID is not code-formatted', () => {
+  const text = register([
+    '| 1 | `TASK-ONE` | `IMPLEMENTATION` | `DONE` | Earlier. | Completed 2026-09-18; proof. |',
+    '| 2 | TASK-TWO | `IMPLEMENTATION` | `NOW` | Current. | Finding. |',
+  ])
+  assert.deepEqual(checkExecutionRegisterText(text), [
+    'execution plan line 8 is a task-table row without a code-formatted task ID',
+    'execution plan must have exactly one NOW row; found 0',
+  ])
 })
 
 test('accepts terminal NONE only after every ordered task is done and no unordered work remains', () => {

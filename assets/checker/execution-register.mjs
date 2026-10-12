@@ -13,6 +13,7 @@ export const TASK_KINDS = new Set([
   'DOCUMENTATION',
 ])
 const STATES = new Set(['DONE', 'NOW', 'QUEUED', 'OPEN', 'DEFERRED'])
+const REGISTER_METADATA = /^(?:`NOW`: `(?:NONE|IDLE|[A-Z][A-Z0-9-]+)`\s*|`(?:IDLE REASON|RESUME WHEN)`:.*)$/
 
 function codeValue(cell) {
   return /^`([^`]+)`$/.exec(cell)?.[1] ?? null
@@ -52,11 +53,15 @@ export function parseExecutionRegisterText(text, source = 'execution plan') {
   const idleReasons = [...register.matchAll(/^`IDLE REASON`:\s*(.*)$/gm)].map((match) => match[1].trim())
   const resumeConditions = [...register.matchAll(/^`RESUME WHEN`:\s*(.*)$/gm)].map((match) => match[1].trim())
 
+  const lines = register.split('\n')
+  const firstLine = text.slice(0, start + REGISTER_START.length).split('\n').length
+  const strayLines = []
   let tableMode = null
-  for (const line of register.split('\n')) {
+  for (const [index, line] of lines.entries()) {
     const row = cells(line)
     if (row.length === 0) {
       tableMode = null
+      if (line.trim() && !REGISTER_METADATA.test(line)) strayLines.push(firstLine + index)
       continue
     }
     if (row[0] === 'Order' && row[1] === 'ID' && row[2] === 'Kind' && row[3] === 'State') {
@@ -67,13 +72,19 @@ export function parseExecutionRegisterText(text, source = 'execution plan') {
       tableMode = 'unordered'
       continue
     }
+    if (!tableMode) {
+      strayLines.push(firstLine + index)
+      continue
+    }
     if (isDivider(row)) continue
-    if (!tableMode) continue
     const order = tableMode === 'ordered' && /^\d+$/.test(row[0]) ? Number(row[0]) : null
     const id = codeValue(row[tableMode === 'unordered' ? 0 : 1])
     const kind = codeValue(row[tableMode === 'unordered' ? 1 : 2])
     const state = codeValue(row[tableMode === 'unordered' ? 2 : 3])
-    if (!id) continue
+    if (!id) {
+      findings.push(`${source} line ${firstLine + index} is a task-table row without a code-formatted task ID`)
+      continue
+    }
     if (!kind) {
       findings.push(`${source} task ${id} has no task kind`)
       continue
@@ -99,6 +110,18 @@ export function parseExecutionRegisterText(text, source = 'execution plan') {
     if (!parsed.evidence) findings.push(`${source} task ${id} has no evidence, source, owner, or trigger`)
     if (tableMode === 'unordered') unordered.push(parsed)
     else ordered.push(parsed)
+  }
+
+  const strayRanges = []
+  for (const lineNumber of strayLines) {
+    const previous = strayRanges.at(-1)
+    const gap = previous ? lines.slice(previous[1] - firstLine + 1, lineNumber - firstLine) : []
+    if (previous && gap.every((gapLine) => !gapLine.trim())) previous[1] = lineNumber
+    else strayRanges.push([lineNumber, lineNumber])
+  }
+  if (strayRanges.length > 0) {
+    const where = strayRanges.map(([from, to]) => (from === to ? `${from}` : `${from}-${to}`)).join(', ')
+    findings.push(`${source} has text inside the execution register that is not the NOW pointer, IDLE metadata, or a task-table row at line(s) ${where}`)
   }
 
   if (ordered.length === 0 && pointer !== 'IDLE') {

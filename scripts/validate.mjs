@@ -92,8 +92,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const verifySection = skill.slice(skill.indexOf('## Mode: verify'), skill.indexOf('## Stop conditions'))
   const verificationNumbers = [...verifySection.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1]))
-  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 14 }, (_, i) => i + 1))) {
-    problems.push('SKILL.md verification matrix must contain ordered proofs 1–14')
+  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 15 }, (_, i) => i + 1))) {
+    problems.push('SKILL.md verification matrix must contain ordered proofs 1–15')
   }
   for (const proof of SKILL_VERIFICATION_PROOFS) {
     if (!includesNormalized(skill, proof)) {
@@ -171,7 +171,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
   for (const proof of ['requiredGlobs', 'execution-role:', 'proposed sequencing', 'parseExecutionRegisterText']) {
     if (!checker.includes(proof)) problems.push(`checker template must preserve ${proof}`)
   }
-  for (const proof of ['REGISTER_START', 'repeats execution ID', 'first incomplete task', 'has no completion date']) {
+  for (const proof of ['REGISTER_START', 'repeats execution ID', 'first incomplete task', 'has no completion date', 'is not the NOW pointer, IDLE metadata, or a task-table row']) {
     if (!parser.includes(proof)) problems.push(`register parser must preserve ${proof}`)
   }
 

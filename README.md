@@ -6,6 +6,7 @@ mechanically enforced execution authority without discarding their history.
 ## What it enforces
 
 - one canonical execution register;
+- a register that holds only the pointer, `IDLE` fields, and task-table rows;
 - permanent semantic task IDs;
 - an explicit kind for every task;
 - exactly one `NOW` task, a justified `IDLE` state, or a terminal `NONE` state;

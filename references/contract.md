@@ -101,6 +101,10 @@ instead reads:
 `RESUME WHEN`: The maintainer explicitly selects `GATE-RTL` after recording the required product analysis.
 ```
 
+Between the markers, every non-blank line is the `NOW` pointer, an `IDLE REASON` or `RESUME WHEN` field,
+or a row of one of the two task tables, including its header and divider. Headings, notes, substep tables
+and other prose belong outside the register.
+
 The surrounding document may retain architecture, decisions, phase history, and rationale. Those sections
 must say they are historical when their old status language could be mistaken for live state.
 
@@ -147,6 +151,7 @@ The checker must discover the configured plan-like documents and fail when:
 - a document is unclassified or has multiple roles;
 - a noncanonical document contains register markers or a forbidden live-sequencing heading;
 - the register is missing, duplicated, malformed, or empty;
+- the register contains a line that is not the pointer, an `IDLE` field, or a task-table row;
 - IDs repeat or violate the stable syntax;
 - the pointer and `NOW` row disagree;
 - ordered positions are not contiguous;

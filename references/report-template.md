@@ -70,4 +70,5 @@ load-bearing.
 | Non-implementation completion has an explicit implementation disposition | | |
 | No closure proof contains an unverified acceptance item | | |
 | Terminal `NONE` is rejected while ordered work, unordered work, or untracked selected delivery remains | | |
+| Register holds only the pointer, `IDLE` fields, and task-table rows | | |
 | Skill-owned mutation suite passes and checker accepts the target config | | |

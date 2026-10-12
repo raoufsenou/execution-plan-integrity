@@ -160,8 +160,9 @@ Run the skill-owned mutation suite and narrow checker before any repository-wide
 11. non-implementation completions track implementation successors by stable ID or cite the recorded
     reason implementation is not required;
 12. every `DEFERRED` task has a trigger and every active task has a source or acceptance boundary;
-13. forbidden live-sequencing headings in noncanonical documents fail the checker; and
-14. the global mutation suite passes and the global checker accepts the target's standard config.
+13. forbidden live-sequencing headings in noncanonical documents fail the checker;
+14. the register holds only the pointer, `IDLE` fields, and task-table rows; and
+15. the global mutation suite passes and the global checker accepts the target's standard config.
 
 Then run only the target repository's relevant final gates. A documentation-only migration does not
 justify unrelated product, database, browser, or deployment checks unless those gates read the changed

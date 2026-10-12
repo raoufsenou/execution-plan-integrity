@@ -8,7 +8,6 @@
     "node": ">=22.22.0"
   },
   "scripts": {
-    "install:global": "node scripts/install.mjs",
     "lint": "node scripts/validate.mjs",
     "test": "node --test tests/skill.test.mjs assets/checker/execution-register.test.mjs"
   }

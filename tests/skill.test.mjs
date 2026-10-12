@@ -1,23 +1,26 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import {
   cpSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 import test, { afterEach } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { ARTIFACT_ENTRIES, REQUIRED_ARTIFACT_FILES, SKILL_NAME } from '../scripts/artifact.mjs'
-import { claimInstallLock, installPlan, installSkill } from '../scripts/install.mjs'
+import { installPlan, installSkill } from '../scripts/install.mjs'
 import { validateSkill } from '../scripts/validate.mjs'
 
 const SOURCE_ROOT = fileURLToPath(new URL('..', import.meta.url))
+const INSTALLER = join(SOURCE_ROOT, 'scripts', 'install.mjs')
 const temporaryRoots = []
 
 afterEach(() => {
@@ -39,6 +42,14 @@ function copyArtifact(destination) {
   }
 }
 
+// Every file under the folder, hidden ones too, named from it with forward slashes.
+function filesIn(folder) {
+  return readdirSync(folder, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(folder, join(entry.parentPath, entry.name)).split(sep).join('/'))
+    .sort()
+}
+
 test('the publishable skill satisfies its enforced contract', () => {
   assert.deepEqual(validateSkill(SOURCE_ROOT), [])
   assert.equal(readFileSync(join(SOURCE_ROOT, 'SKILL.md'), 'utf8').split('\n').length <= 500, true)
@@ -47,19 +58,21 @@ test('the publishable skill satisfies its enforced contract', () => {
 test('installer arguments expose only explicit replacement', () => {
   assert.deepEqual(installPlan([]), { replace: false })
   assert.deepEqual(installPlan(['--replace']), { replace: true })
-  assert.throws(() => installPlan(['--target', '/tmp/elsewhere']), /Usage:/)
+  assert.throws(() => installPlan(['--target', '/tmp/elsewhere']), /Usage: node scripts\/install\.mjs \[--replace\]/)
+  assert.throws(() => installPlan(['--replace', '--replace']), /Usage:/)
 })
 
-test('global installation is a validated copy independent from its source', async () => {
+test('global installation is a validated copy independent from its source', () => {
   const root = temporaryRoot()
   const source = join(root, 'source')
   const skills = join(root, 'skills')
   copyArtifact(source)
   writeFileSync(join(source, 'references', 'unreviewed.md'), 'not part of the artifact\n')
 
-  const destination = await installSkill({ sourceRoot: source, targetRoot: skills, lockPort: 0 })
+  const { destination, action } = installSkill({ sourceRoot: source, targetRoot: skills })
   rmSync(source, { recursive: true })
 
+  assert.equal(action, 'installed')
   assert.equal(destination, join(skills, SKILL_NAME))
   assert.deepEqual(validateSkill(destination, { artifactOnly: true }), [])
   for (const file of REQUIRED_ARTIFACT_FILES) assert.equal(existsSync(join(destination, file)), true)
@@ -68,55 +81,78 @@ test('global installation is a validated copy independent from its source', asyn
   assert.equal(existsSync(join(destination, 'references', 'unreviewed.md')), false)
 })
 
-test('an existing installation refuses implicitly and replaces only a validated artifact', async () => {
+test('an existing installation refuses implicitly and replaces only a validated artifact', () => {
   const root = temporaryRoot()
   const source = join(root, 'source')
-  const replacement = join(root, 'replacement')
   const invalid = join(root, 'invalid')
   const skills = join(root, 'skills')
   copyArtifact(source)
-  copyArtifact(replacement)
   copyArtifact(invalid)
-  const probe = await claimInstallLock(0)
-  const port = probe.port
-  await probe.release()
-  await installSkill({ sourceRoot: source, targetRoot: skills, lockPort: port })
-
-  await assert.rejects(
-    installSkill({ sourceRoot: replacement, targetRoot: skills, lockPort: port }),
-    /Refusing to overwrite existing skill/,
-  )
   rmSync(join(invalid, 'references', 'contract.md'))
-  await assert.rejects(
-    installSkill({ sourceRoot: invalid, targetRoot: skills, replace: true, lockPort: port }),
-    /Source skill is invalid/,
-  )
 
-  const destination = await installSkill({
-    sourceRoot: replacement,
-    targetRoot: skills,
-    replace: true,
-    lockPort: port,
+  assert.throws(() => installSkill({ sourceRoot: invalid, targetRoot: skills }), /fails pnpm lint, so nothing was installed/)
+  assert.equal(existsSync(skills), false)
+
+  const { destination } = installSkill({ sourceRoot: source, targetRoot: skills })
+  writeFileSync(join(destination, 'SKILL.md'), 'edited by hand\n')
+  writeFileSync(join(destination, 'notes.md'), 'written by hand\n')
+  assert.throws(() => installSkill({ sourceRoot: source, targetRoot: skills }), {
+    message: `${destination} differs from this checkout:\n- SKILL.md (changed)\n- notes.md (removed)\nRerun with --replace to replace it.`,
+  })
+  assert.throws(() => installSkill({ sourceRoot: invalid, targetRoot: skills, replace: true }), /fails pnpm lint/)
+  assert.equal(readFileSync(join(destination, 'SKILL.md'), 'utf8'), 'edited by hand\n')
+
+  assert.deepEqual(installSkill({ sourceRoot: source, targetRoot: skills, replace: true }), {
+    destination,
+    action: 'replaced',
+    changes: ['SKILL.md (changed)', 'notes.md (removed)'],
   })
   assert.deepEqual(validateSkill(destination, { artifactOnly: true }), [])
+  assert.deepEqual(readdirSync(skills), [SKILL_NAME])
 })
 
-test('the OS-held installer lock excludes concurrent installation', async () => {
+test('an install that matches the checkout is left as it is, even with --replace', () => {
   const root = temporaryRoot()
   const source = join(root, 'source')
+  const skills = join(root, 'skills')
   copyArtifact(source)
-  const lock = await claimInstallLock(0)
-  try {
-    await assert.rejects(
-      installSkill({ sourceRoot: source, targetRoot: join(root, 'skills'), lockPort: lock.port }),
-      /Refusing concurrent installation/,
-    )
-  } finally {
-    await lock.release()
-  }
+  const { destination } = installSkill({ sourceRoot: source, targetRoot: skills })
+  writeFileSync(join(destination, '.DS_Store'), 'the system\n')
+
+  const current = { destination, action: 'current', changes: [] }
+  assert.deepEqual(installSkill({ sourceRoot: source, targetRoot: skills }), current)
+  assert.deepEqual(installSkill({ sourceRoot: source, targetRoot: skills, replace: true }), current)
+  assert.deepEqual(filesIn(destination), ['.DS_Store', ...REQUIRED_ARTIFACT_FILES].sort())
 })
 
-test('installation dereferences artifact symlinks before the checkout disappears', async () => {
+test('a folder left by an install that stopped part-way stops the next one before it writes', () => {
+  const root = temporaryRoot()
+  const source = join(root, 'source')
+  const skills = join(root, 'skills')
+  copyArtifact(source)
+  const left = join(skills, `.${SKILL_NAME}-install-Ab12Cd`)
+  mkdirSync(join(left, 'previous'), { recursive: true })
+
+  assert.throws(
+    () => installSkill({ sourceRoot: source, targetRoot: skills }),
+    (error) => error.message.includes(`stopped part-way, leaving ${left}:`),
+  )
+  assert.deepEqual(readdirSync(skills), [`.${SKILL_NAME}-install-Ab12Cd`])
+})
+
+test('a checkout kept inside the install is refused, even with --replace, and left whole', () => {
+  const skills = join(temporaryRoot(), 'skills')
+  const cloned = join(skills, SKILL_NAME)
+  copyArtifact(cloned)
+  writeFileSync(join(cloned, 'README.md'), '# Checkout\n')
+
+  assert.throws(() => installSkill({ sourceRoot: cloned, targetRoot: skills, replace: true }), {
+    message: `This checkout is in ${cloned}: install from a checkout kept elsewhere`,
+  })
+  assert.deepEqual(filesIn(cloned), ['README.md', ...REQUIRED_ARTIFACT_FILES].sort())
+})
+
+test('installation dereferences artifact symlinks before the checkout disappears', () => {
   const root = temporaryRoot()
   const source = join(root, 'source')
   const outside = join(root, 'contract-source.md')
@@ -125,14 +161,32 @@ test('installation dereferences artifact symlinks before the checkout disappears
   rmSync(join(source, 'references', 'contract.md'))
   symlinkSync(outside, join(source, 'references', 'contract.md'))
 
-  const destination = await installSkill({
+  const { destination } = installSkill({
     sourceRoot: source,
     targetRoot: join(root, 'skills'),
-    lockPort: 0,
   })
   rmSync(source, { recursive: true })
   rmSync(outside)
   assert.deepEqual(validateSkill(destination, { artifactOnly: true }), [])
+})
+
+test('the command installs this checkout under CODEX_HOME, and exits 1 on a refusal and 2 on a usage error', () => {
+  const home = temporaryRoot()
+  const run = (...args) => spawnSync(process.execPath, [INSTALLER, ...args], { encoding: 'utf8', env: { ...process.env, CODEX_HOME: home } })
+  const destination = join(home, 'skills', SKILL_NAME)
+
+  const installed = run()
+  assert.equal(installed.status, 0, installed.stderr)
+  assert.equal(installed.stdout, `Installed ${SKILL_NAME} at ${destination}\n`)
+  assert.equal(run().stdout, `${SKILL_NAME} at ${destination} already matches this checkout\n`)
+  writeFileSync(join(destination, 'SKILL.md'), 'edited by hand\n')
+  const refused = run()
+  assert.equal(refused.status, 1)
+  assert.equal(refused.stderr, `${destination} differs from this checkout:\n- SKILL.md (changed)\nRerun with --replace to replace it.\n`)
+  const replaced = run('--replace')
+  assert.equal(replaced.status, 0, replaced.stderr)
+  assert.equal(replaced.stdout, `Replaced ${SKILL_NAME} at ${destination}:\n- SKILL.md (changed)\n`)
+  assert.equal(run('--force').status, 2)
 })
 
 test('validation rejects metadata drift, missing references, and extra artifact files', () => {

@@ -56,17 +56,20 @@ pnpm lint
 
 ## Install globally
 
-```bash
-pnpm install:global
-```
-
-The default destination is `$CODEX_HOME/skills/execution-plan-integrity`, or
-`~/.codex/skills/execution-plan-integrity` when `CODEX_HOME` is unset. An existing installation is never
-overwritten implicitly. After validating a newer checkout:
+From this checkout:
 
 ```bash
-pnpm install:global -- --replace
+node scripts/install.mjs            # the first time
+node scripts/install.mjs --replace  # after any change to this checkout
 ```
+
+It copies the skill into `~/.codex/skills/execution-plan-integrity`, or under `$CODEX_HOME/skills` when that
+is set. Agents use that copy, not this checkout, so a change here does nothing until you reinstall. An install
+that already matches is left as it is; without `--replace`, one that differs is listed file by file and left
+as it is. A checkout that fails `pnpm lint` is refused before anything is written.
+
+Reinstall when no run is in progress. An agent reads the skill once, when it starts, but runs the installed
+checker every time, so a run that began before the update meets rules it never read.
 
 Codex skill packaging follows the official [Build skills documentation](https://developers.openai.com/codex/skills/).
 

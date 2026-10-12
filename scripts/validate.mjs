@@ -92,8 +92,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const verifySection = skill.slice(skill.indexOf('## Mode: verify'), skill.indexOf('## Stop conditions'))
   const verificationNumbers = [...verifySection.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1]))
-  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 18 }, (_, i) => i + 1))) {
-    problems.push('SKILL.md verification matrix must contain ordered proofs 1–18')
+  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 20 }, (_, i) => i + 1))) {
+    problems.push('SKILL.md verification matrix must contain ordered proofs 1–20')
   }
   for (const proof of SKILL_VERIFICATION_PROOFS) {
     if (!includesNormalized(skill, proof)) {
@@ -128,6 +128,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     'The `NOW` pointer has exactly three valid forms:',
     'No item disappears because it was duplicated, stale, inconvenient, or outside the former sequence.',
     'Every fact has one home, and every other place cites it instead of copying it:',
+    'A batch is one ordered row that stands for several steps running at once',
+    'A run of finished rows leaves the register the same way through a rollup',
   ]) {
     if (!includesNormalized(contract, invariant)) problems.push(`contract.md must preserve: ${invariant}`)
   }
@@ -170,11 +172,15 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const checker = readFileSync(join(root, 'assets/checker/check-execution-plan.mjs'), 'utf8')
   const parser = readFileSync(join(root, 'assets/checker/execution-register.mjs'), 'utf8')
+  const proofChecker = readFileSync(join(root, 'assets/checker/completion-proof.mjs'), 'utf8')
   for (const proof of ['requiredGlobs', 'execution-role:', 'proposed sequencing', 'parseExecutionRegisterText', 'CANONICAL_WORD_LIMIT']) {
     if (!checker.includes(proof)) problems.push(`checker template must preserve ${proof}`)
   }
-  for (const proof of ['REGISTER_START', 'repeats execution ID', 'first incomplete task', 'has no completion date', 'is not the NOW pointer, IDLE metadata, or a task-table row']) {
+  for (const proof of ['REGISTER_START', 'repeats execution ID', 'first incomplete task', 'has no completion date', 'is not the NOW pointer, IDLE metadata, or a task-table row', 'namedBatchMembers', 'the batch is the only NOW row']) {
     if (!parser.includes(proof)) problems.push(`register parser must preserve ${proof}`)
+  }
+  for (const proof of ['closing proof that lists it', 'listed by the proof of', 'since a batch member\'s row leaves the register']) {
+    if (!proofChecker.includes(proof)) problems.push(`proof checker must preserve ${proof}`)
   }
 
   const openai = readFileSync(join(root, 'agents/openai.yaml'), 'utf8')

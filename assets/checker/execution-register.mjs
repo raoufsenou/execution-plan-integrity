@@ -28,6 +28,20 @@ function isDivider(row) {
   return row.length > 0 && row.every((cell) => /^:?-{3,}:?$/.test(cell))
 }
 
+export function namedBatchMembers(work) {
+  if (!/^Batch:/.test(work ?? '')) return null
+  return [...work.matchAll(/`([A-Z][A-Z0-9-]+)`/g)].map((match) => match[1])
+}
+
+export function parseOrderedRow(line) {
+  if (typeof line !== 'string' || /[\r\n]/.test(line)) return null
+  const row = cells(line.trim())
+  if (row.length < 6 || !/^\d+$/.test(row[0])) return null
+  const [id, kind, state] = [codeValue(row[1]), codeValue(row[2]), codeValue(row[3])]
+  if (!ID.test(id ?? '') || RESERVED_IDS.has(id) || !TASK_KINDS.has(kind) || !STATES.has(state)) return null
+  return { order: Number(row[0]), id, kind, state, work: row[4], evidence: row[5] }
+}
+
 export function parseExecutionRegisterText(text, source = 'execution plan') {
   const findings = []
   const ordered = []
@@ -35,7 +49,7 @@ export function parseExecutionRegisterText(text, source = 'execution plan') {
   const start = text.indexOf(REGISTER_START)
   const end = text.indexOf(REGISTER_END)
   if (start === -1 || end === -1 || end <= start) {
-    return { findings: [`${source} has no single bounded execution register`], ordered, unordered, all: [], pointer: null }
+    return { findings: [`${source} has no single bounded execution register`], ordered, unordered, all: [], pointer: null, batch: null }
   }
   if (text.indexOf(REGISTER_START, start + REGISTER_START.length) !== -1) {
     findings.push(`${source} has more than one execution register start`)
@@ -149,6 +163,33 @@ export function parseExecutionRegisterText(text, source = 'execution plan') {
     }
   }
 
+  let batch = null
+  ordered.forEach((row, index) => {
+    const named = namedBatchMembers(row.work)
+    if (!named) return
+    if (row.state === 'DONE') {
+      findings.push(`${source} closed batch ${row.id} still lists its members; its row becomes a summary and its members leave the register`)
+      return
+    }
+    if (row.kind !== 'VALIDATION') findings.push(`${source} batch ${row.id} is ${row.kind}, not VALIDATION`)
+    const members = [...new Set(named)]
+    const repeated = members.filter((id) => named.indexOf(id) !== named.lastIndexOf(id))
+    if (repeated.length > 0) findings.push(`${source} batch ${row.id} names ${repeated.join(', ')} more than once`)
+    if (members.length < 2) findings.push(`${source} batch ${row.id} names ${members.length} member(s); a batch runs at least two`)
+    const block = ordered.slice(index + 1, index + 1 + members.length)
+    if (block.length !== members.length || block.some((member) => !members.includes(member.id))) {
+      const after = block.map((member) => member.id).join(', ') || 'none'
+      findings.push(`${source} batch ${row.id} names ${members.join(', ') || 'no member'} but the row(s) after it are ${after}`)
+    }
+    const held = block.filter((candidate) => members.includes(candidate.id))
+    for (const member of held) {
+      if (namedBatchMembers(member.work)) findings.push(`${source} batch ${row.id} holds batch ${member.id}; a batch cannot hold another`)
+      if (member.state === 'NOW') findings.push(`${source} member ${member.id} of batch ${row.id} is NOW; the batch is the only NOW row`)
+    }
+    if (row.state === 'NOW') batch = { id: row.id, members: held.map((member) => member.id) }
+  })
+  const currentMembers = new Set(batch?.members ?? [])
+
   const nowRows = all.filter((row) => row.state === 'NOW')
   const placeholder = /^(?:-|n\/?a|none|tbd|todo|unknown)$/i
   if (pointer === 'IDLE') {
@@ -214,13 +255,14 @@ export function parseExecutionRegisterText(text, source = 'execution plan') {
       findings.push(`${source} first incomplete task ${firstIncomplete.id} is ${firstIncomplete.state}, not NOW`)
     }
     for (const row of ordered.slice(firstIncompleteIndex + 1)) {
+      if (currentMembers.has(row.id)) continue
       if (row.state !== 'QUEUED') {
         findings.push(`${source} task ${row.id} follows NOW but is ${row.state}, not QUEUED`)
       }
     }
   }
 
-  return { findings, ordered, unordered, all, pointer }
+  return { findings, ordered, unordered, all, pointer, batch }
 }
 
 export function checkExecutionRegisterText(text, source = 'execution plan') {

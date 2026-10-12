@@ -13,6 +13,9 @@ mechanically enforced execution authority without discarding their history.
 - permanent semantic task IDs;
 - an explicit kind for every task;
 - exactly one `NOW` task, a justified `IDLE` state, or a terminal `NONE` state;
+- batches: one `NOW` row for steps running at once on the maintainer's direction, whose members finish in
+  any order and are closed where their work was done;
+- finished rows that leave the register only through a closed batch or rollup, whose proof keeps each one;
 - closed states: `DONE`, `NOW`, `QUEUED`, `OPEN`, and `DEFERRED`;
 - a requirement-level closure proof for every `DONE` task;
 - explicit roles for every plan-like document;

@@ -175,13 +175,16 @@ Use these legacy-proof rules consistently:
 
 Run the mutation tests. They must demonstrate rejection of duplicate IDs, multiple `NOW` rows, a pointer
 mismatch, a queued item before the current item, an unclassified document, a noncanonical register, stray
-text inside the register, and a canonical document over the word limit.
+text inside the register, a canonical document over the word limit, a `DONE` row after `NOW` outside the
+current batch, a batch member that is `NOW`, a member list that does not match the rows after its batch,
+and a batch inside a batch.
 
 Also demonstrate rejection of a missing closure proof, mismatched task kind, nonexistent evidence path,
 unverified acceptance item, implementation task without integration/falsification, design completion
 without a tracked implementation disposition, preserved text that is not the task's row or lines of notes,
-`IDLE` without tracked work/reason/resume condition, and terminal `NONE` with ordered or unordered work
-remaining.
+an incomplete batch member proof, a batch closed while a member is unfinished, a proof that no `DONE`
+task, current batch member or closing proof accounts for, `IDLE` without tracked work/reason/resume
+condition, and terminal `NONE` with ordered or unordered work remaining.
 
 Then run the checker against the real repository and the existing relevant final gates. Report the stable
 `NOW` ID, justified `IDLE` state, or strictly verified terminal `NONE` state last.
@@ -198,7 +201,8 @@ complete when that checker passes and every fact has one home, not when the docu
    ledger. If the findings differ from the audit, append a read-only supplement before editing.
 2. **Open the upgrade task.** Append the stable ordered task `EXECUTION-PLAN-COMPACTION` of kind
    `MIGRATION`, or reuse it when an interrupted upgrade left it unfinished. When the pointer is `IDLE` or
-   `NONE`, make it the sole `NOW` row and remove any `IDLE` fields. When another task is `NOW`, the
+   `NONE`, make it the sole `NOW` row and remove any `IDLE` fields. A batch that is `NOW` is never
+   preempted: the upgrade waits until it closes. When another task is `NOW`, the
    audit's one decision asks whether the upgrade may preempt it. On explicit direction, insert the upgrade
    task immediately before it, renumber the rows after it, and make the displaced task `QUEUED` with its
    scope unchanged. Without that direction, stop: the repository keeps failing the checker, so its current
@@ -216,8 +220,9 @@ complete when that checker passes and every fact has one home, not when the docu
    contract names: the current step moves into its task's row, each decision in force keeps one home that
    rows cite, and an ordered list of unfinished steps becomes rows only as the accepted audit's crosswalk
    maps them, while a list of finished steps stays in the snapshot beside the records that prove them.
-   Keep every row's ID, kind, state and scope except where the upgrade task's insertion or that crosswalk
-   changes them. Shorten finished rows only when the document cannot otherwise fit, keeping each
+   Steps become a batch's members only on the maintainer's direction, never because the upgrade judged
+   them independent. Keep every row's ID, kind, state and scope except where the upgrade task's insertion
+   or that crosswalk changes them. Shorten finished rows only when the document cannot otherwise fit, keeping each
    completion date as the first date in its last cell.
 5. **Clear instruction files.** Move execution state copied into `AGENTS.md` or similar instruction files,
    verbatim, into an `archive` document, and leave the instruction from `SKILL.md` apply step 7, in its

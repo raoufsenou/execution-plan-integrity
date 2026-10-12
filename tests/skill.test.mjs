@@ -219,3 +219,44 @@ test('validation rejects metadata drift, missing references, and extra artifact 
     true,
   )
 })
+
+test('validation rejects a skill that loses a batch invariant, verification item, or check', () => {
+  const losses = [
+    [
+      'references/contract.md',
+      'A batch is one ordered row that stands for several steps running at once',
+      'contract.md must preserve: A batch is one ordered row that stands for several steps running at once',
+    ],
+    [
+      'SKILL.md',
+      'a batch is a `VALIDATION` row naming exactly',
+      'SKILL.md verification matrix must preserve: a batch is a `VALIDATION` row naming exactly the members after it, '
+        + 'none of them `NOW` or a batch, and',
+    ],
+    [
+      'references/report-template.md',
+      '| A batch names exactly the members after it, and only its members finish out of order |',
+      'report-template.md verification matrix must include A batch names exactly the members after it, and only its '
+        + 'members finish out of order',
+    ],
+    [
+      'assets/checker/execution-register.mjs',
+      'the batch is the only NOW row',
+      'register parser must preserve the batch is the only NOW row',
+    ],
+    [
+      'assets/checker/completion-proof.mjs',
+      'closing proof that lists it',
+      'proof checker must preserve closing proof that lists it',
+    ],
+  ]
+  for (const [file, pinned, problem] of losses) {
+    const root = temporaryRoot()
+    copyArtifact(root)
+    const path = join(root, file)
+    const text = readFileSync(path, 'utf8')
+    assert.equal(text.split(pinned).length, 2, `${file} holds its pin exactly once`)
+    writeFileSync(path, text.replace(pinned, 'removed'))
+    assert.ok(validateSkill(root).includes(problem), problem)
+  }
+})

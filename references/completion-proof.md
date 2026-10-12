@@ -160,6 +160,30 @@ verification was run again. A historical result needs its dated repository recor
 rerun is a separate verification entry. If a later authorized task intentionally superseded a requirement,
 follow the supersession rule in `migration.md` instead of using `outOfScope` to conceal the contradiction.
 
+## Batches and rollups
+
+A member of the batch that is `NOW` is closed by the agent that did it, where it did the work, before the
+coordinator marks its row `DONE`. The checker checks that proof as fully as any other, except against a
+register date the row does not have yet. It must preserve the member's row in `closedRow`, because the
+coordinator reduces that row at the merge and it leaves the register when the batch closes. The agent
+edits nothing in the canonical document, so the member's working notes go straight into `notes`.
+
+A closed batch's or rollup's proof, its closing proof, preserves in `members` every row it took out of the
+register, verbatim and one line each, as the row stood when it left:
+
+```json
+"members": [
+  "| 5 | `UI-WALLET-HOME` | `IMPLEMENTATION` | `DONE` | The Wallet home shows one balance. | Completed 2026-10-13; `docs/execution-proofs/UI-WALLET-HOME.json`. |",
+  "| 6 | `UI-BANK-TEAM` | `IMPLEMENTATION` | `DONE` | The Bank's team page fits a phone. | Completed 2026-10-14; `docs/execution-proofs/UI-BANK-TEAM.json`. |"
+]
+```
+
+The checker matches each preserved row's proof exactly as it matches a register row's: task ID, kind and
+completion date. A batch's proof also preserves the batch row in `closedRow`, lists exactly the members
+that row named, and tracks its implementation-like members by ID in its disposition. Only a `VALIDATION`
+batch or a `DOCUMENTATION` rollup lists members. A rollup may list a closed batch or an earlier rollup,
+whose members are then checked the same way; a batch's members never list members of their own.
+
 ## Refusal conditions
 
 Do not mark the task `DONE` when:
@@ -170,5 +194,7 @@ Do not mark the task `DONE` when:
 - a test does not exercise the premise needed for its assertion;
 - required manual, device or external evidence was not obtained;
 - a design or decision selected delivery but no implementation task owns it;
-- a compatibility behavior was added without the recorded decision that requires it; or
+- a compatibility behavior was added without the recorded decision that requires it;
+- the task is a batch and a member is unfinished, a branch is unmerged, or the project's complete gates
+  have not passed since the last merge; or
 - current source contradicts the claimed outcome even if all commands pass.

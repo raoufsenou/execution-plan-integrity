@@ -36,6 +36,7 @@ maintainer decision; `UNPROVABLE` blocks apply until the maintainer decides its 
 - Facts kept in more than one place, and the one home each keeps:
 - Pointer (`NOW` ID, justified `IDLE`, or terminal `NONE`):
 - `IDLE` reason and resume condition, when applicable:
+- Steps running at once, and the maintainer direction that makes each set a batch:
 - Ordered tasks:
 - Open tasks:
 - Deferred tasks:
@@ -64,10 +65,12 @@ load-bearing.
 | `IDLE` reason and resume condition name tracked unresolved work | | |
 | IDs are unique and ordered positions are contiguous | | |
 | First unfinished ordered task is `NOW` | | |
+| A batch names exactly the members after it, and only its members finish out of order | | |
 | Noncanonical register and sequencing are rejected | | |
 | Required evidence, source, owner, and trigger cells are present | | |
 | Every task declares an outcome kind | | |
 | Every `DONE` row has a matching semantic closure proof | | |
+| Batch member proofs preserve their rows, and every row a closing proof preserves has a matching proof | | |
 | Every requirement has repository evidence and meaningful verification | | |
 | Implementation proofs contain ledger, reachability and falsification | | |
 | Non-implementation completion has an explicit implementation disposition | | |

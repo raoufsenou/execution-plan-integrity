@@ -156,6 +156,7 @@ export function checkExecutionProject({ root = process.cwd(), configPath = DEFAU
     root,
     directory: config.completionProofDirectory,
     rows: register.all,
+    batch: register.batch,
   }))
   return findings
 }

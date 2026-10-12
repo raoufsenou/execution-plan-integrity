@@ -50,6 +50,8 @@ into another language under this skill.
   authority classification rather than deleting it.
 - `audit` is read-only.
 - Never infer which conflicting item should win. Record the conflict and stop for one decision.
+- Never form a batch or put a task before a batch that is `NOW`; a batch exists only on the
+  maintainer's direction.
 - Never mark work done from prose, a green documentation checker, a file list, or an implementation
   author's summary. Reconstruct the requirement-to-evidence result from current sources.
 - Do not add target-repository checker code, mutation tests, package scripts, or validation-gate wiring.
@@ -76,6 +78,7 @@ The audit must explicitly report:
 
 - every plan-like document and its proposed role;
 - every location that currently declares “next,” ordering, or live state;
+- every set of steps running at once, such as a fan-out, and whether the maintainer directed it as a batch;
 - every fact that the contract gives one home but the repository keeps in more than one place;
 - duplicated, conflicting, missing, and positional task identities;
 - the proposed canonical document and stable `NOW` item, justified `IDLE` state, or terminal `NONE` state;
@@ -116,8 +119,8 @@ restructured.
 
 ## Mode: close
 
-Use this mode whenever an agent proposes changing `NOW` to `DONE`, including documentation, design,
-decision, migration and validation tasks.
+Use this mode whenever an agent proposes changing `NOW` to `DONE` or closes a batch member, including
+documentation, design, decision, migration and validation tasks.
 
 1. Read the current task, every referenced requirement and decision, its non-goals, and the full
    definitions of interfaces it depends on. Freeze stable requirement IDs before judging completion.
@@ -145,6 +148,15 @@ decision, migration and validation tasks.
    and names the proof, and remove from the canonical document the working notes the proof now preserves.
    If evidence fails, leave execution state unchanged and report the unmet requirement IDs.
 
+A batch member is closed by the agent that did it, where it did the work: steps 1 to 7, with the member's
+working notes going straight into the proof, because an agent edits nothing in the canonical document.
+Step 8 is the coordinator's: when it merges the agent's branch, it marks each member that branch closed
+`DONE` with its proof's date and reduces the row, leaving the pointer on the batch. The batch closes as a
+`VALIDATION` task once every member is `DONE`, every branch is merged, and the project's complete gates
+pass after the last merge. Its proof preserves every member's row in `members`, and in the same pass the
+member rows leave the register, the rows after them are renumbered, and the pointer moves to the first row
+after them. A rollup closes the same way over the finished rows it removes.
+
 Closing work is a semantic audit, not a ceremony. A green full suite does not override a missing route,
 caller, migration, UI path, external gate or requirement-specific assertion.
 
@@ -160,23 +172,27 @@ Run the skill-owned mutation suite and narrow checker before any repository-wide
 6. the pointer names the single `NOW` row, is `IDLE` only with tracked unresolved work plus a reason and
    resume condition, or is `NONE` only when no ordered or unordered work remains;
 7. ordered task numbers are contiguous and the first unfinished task is `NOW`;
-8. every task declares its kind and every `DONE` task has a matching v2 closure proof;
-9. every proof enumerates requirements, repository evidence and meaningful verification, reports no
-   unverified acceptance item, and matches the register's task ID, kind and completion date;
-10. implementation-like proofs contain an exact file ledger, reachable integration trace and
+8. a batch is a `VALIDATION` row naming exactly the members after it, none of them `NOW` or a batch, and
+   no row after `NOW` is `DONE` unless it is a member of the batch that is `NOW`;
+9. every task declares its kind and every `DONE` task has a matching v2 closure proof;
+10. every proof enumerates requirements, repository evidence and meaningful verification, reports no
+    unverified acceptance item, and matches the register's task ID, kind and completion date;
+11. every proof of a member of the current batch preserves the member's row and passes, except against a
+    date its row does not have yet, and every row a closing proof preserves has a valid proof matching it;
+12. implementation-like proofs contain an exact file ledger, reachable integration trace and
     falsification evidence;
-11. non-implementation completions track implementation successors by stable ID or cite the recorded
+13. non-implementation completions track implementation successors by stable ID or cite the recorded
     reason implementation is not required;
-12. every `DEFERRED` task has a trigger and every active task has a source or acceptance boundary;
-13. forbidden live-sequencing headings in noncanonical documents fail the checker;
-14. the register holds only the pointer, `IDLE` fields, and task-table rows;
-15. the canonical document stays within the contract's word limit;
-16. each fact has one home: the current step only in the `NOW` row, each decision in force in one current
+14. every `DEFERRED` task has a trigger and every active task has a source or acceptance boundary;
+15. forbidden live-sequencing headings in noncanonical documents fail the checker;
+16. the register holds only the pointer, `IDLE` fields, and task-table rows;
+17. the canonical document stays within the contract's word limit;
+18. each fact has one home: the current step only in the `NOW` row, each decision in force in one current
     document, each step with its own record of completion in its own row, and no ordered list of steps in
     a current document outside the register;
-17. the repository instruction from apply step 7 is in place and instruction files hold no execution
+19. the repository instruction from apply step 7 is in place and instruction files hold no execution
     state; and
-18. the global mutation suite passes and the global checker accepts the target's standard config.
+20. the global mutation suite passes and the global checker accepts the target's standard config.
 
 Then run only the target repository's relevant final gates. A documentation-only migration does not
 justify unrelated product, database, browser, or deployment checks unless those gates read the changed

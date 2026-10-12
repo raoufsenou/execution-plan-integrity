@@ -31,6 +31,9 @@ maintainer decision; `UNPROVABLE` blocks apply until the maintainer decides its 
 ## Proposed canonical register
 
 - Canonical document:
+- Canonical word count now and after the move, against the contract's limit:
+- Destination of every section that leaves the canonical document:
+- Facts kept in more than one place, and the one home each keeps:
 - Pointer (`NOW` ID, justified `IDLE`, or terminal `NONE`):
 - `IDLE` reason and resume condition, when applicable:
 - Ordered tasks:
@@ -71,4 +74,7 @@ load-bearing.
 | No closure proof contains an unverified acceptance item | | |
 | Terminal `NONE` is rejected while ordered work, unordered work, or untracked selected delivery remains | | |
 | Register holds only the pointer, `IDLE` fields, and task-table rows | | |
+| Canonical document stays within the word limit | | |
+| Each fact has one home | | |
+| Repository instruction is in place and instruction files hold no execution state | | |
 | Skill-owned mutation suite passes and checker accepts the target config | | |

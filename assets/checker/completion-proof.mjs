@@ -192,6 +192,23 @@ function checkImplementationProof(proof, row, root, findings) {
   }
 }
 
+function checkPreservedText(proof, row, proofPath, findings) {
+  if (proof.closedRow !== undefined) {
+    if (!nonEmpty(proof.closedRow) || /[\r\n]/.test(proof.closedRow) || !proof.closedRow.trim().startsWith('|')) {
+      findings.push(`${proofPath} closedRow must be the task's register row on one line`)
+    } else if (!proof.closedRow.includes(`\`${row.id}\``)) {
+      findings.push(`${proofPath} closedRow does not name ${row.id}`)
+    }
+  }
+  if (proof.notes !== undefined && (
+    !Array.isArray(proof.notes)
+    || proof.notes.length === 0
+    || proof.notes.some((line) => typeof line !== 'string' || /[\r\n]/.test(line))
+  )) {
+    findings.push(`${proofPath} notes must be a non-empty array of single lines of text`)
+  }
+}
+
 export function checkCompletionProofs({ root, directory, rows }) {
   const findings = []
   const proofDirectory = relativePath(directory)
@@ -243,6 +260,7 @@ export function checkCompletionProofs({ root, directory, rows }) {
       findings.push(`${proofPath} has ${proof.unverified.length} unverified acceptance item(s)`)
     }
     if (!Array.isArray(proof.outOfScope)) findings.push(`${proofPath} outOfScope must be an array`)
+    checkPreservedText(proof, row, proofPath, findings)
 
     checkDisposition(proof, row, rowsById, root, findings)
     if (IMPLEMENTATION_KINDS.has(row.kind)) checkImplementationProof(proof, row, root, findings)

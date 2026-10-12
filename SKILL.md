@@ -76,8 +76,11 @@ The audit must explicitly report:
 
 - every plan-like document and its proposed role;
 - every location that currently declares “next,” ordering, or live state;
+- every fact that the contract gives one home but the repository keeps in more than one place;
 - duplicated, conflicting, missing, and positional task identities;
 - the proposed canonical document and stable `NOW` item, justified `IDLE` state, or terminal `NONE` state;
+- the canonical document's word count against the contract's limit, and where every section that must
+  leave it would move;
 - the full unfinished/deferred/decision-owned crosswalk; and
 - every completed design, decision or validation task that is being mistaken for implemented delivery;
 - every `DONE` row whose requirements, integration path or closure evidence cannot be reconstructed; and
@@ -86,7 +89,8 @@ The audit must explicitly report:
 ## Mode: apply
 
 Require an accepted audit. Follow [migration.md](references/migration.md), preserving the accepted
-crosswalk exactly.
+crosswalk exactly. A repository that already uses this skill follows that file's upgrade section instead
+of its apply state machine.
 
 1. Add one canonical execution register with stable IDs, explicit task kinds and exactly one `NOW` task,
    the contract's justified `IDLE` state, or its strictly terminal `NONE` state.
@@ -101,8 +105,9 @@ crosswalk exactly.
    the repository.
 6. Remove a repository-local copy of this skill's checker or mutation suite when the maintainer authorizes
    consolidation; preserve only target-specific configuration and evidence.
-7. Add a repository instruction that agents begin with the stable `NOW` ID and never create a second
-   live queue.
+7. Add a repository instruction that agents begin with the stable `NOW` ID, never create a second live
+   queue, never copy execution state into instruction files, and treat `archive` documents and the text
+   closure proofs preserve as history, never as instructions.
 
 Do not preserve a `DONE` claim that lacks the v2 completion proof. Reconstruct the proof from current
 requirements and implementation, or keep the item visibly unverified; never manufacture historical
@@ -130,12 +135,15 @@ decision, migration and validation tasks.
 6. For `DESIGN`, `DECISION`, `VALIDATION` or `DOCUMENTATION`, state whether implementation is delivered,
    tracked by stable task IDs, or explicitly not required by a recorded decision. These task kinds never
    imply implementation by themselves.
-7. Write the machine-readable closure proof, run the proof checker and its mutation tests, then run the
-   narrow relevant repository checks. The proof must report zero unverified acceptance items.
+7. Write the machine-readable closure proof, preserving the task's full row and its working notes in it
+   verbatim, run the proof checker and its mutation tests, then run the narrow relevant repository checks.
+   The proof must report zero unverified acceptance items.
 8. Only after all proofs pass, update the task to `DONE` and advance the pointer in the same pass. Select
    another task only when it is already authorized and ordered; use `IDLE` when tracked work remains but
-   no task is currently executable, and `NONE` only when no tracked work remains. If evidence fails, leave
-   execution state unchanged and report the unmet requirement IDs.
+   no task is currently executable, and `NONE` only when no tracked work remains. In the same pass, reduce
+   the closed row to a one-line summary that keeps the completion date as the first date in its last cell
+   and names the proof, and remove from the canonical document the working notes the proof now preserves.
+   If evidence fails, leave execution state unchanged and report the unmet requirement IDs.
 
 Closing work is a semantic audit, not a ceremony. A green full suite does not override a missing route,
 caller, migration, UI path, external gate or requirement-specific assertion.
@@ -161,8 +169,14 @@ Run the skill-owned mutation suite and narrow checker before any repository-wide
     reason implementation is not required;
 12. every `DEFERRED` task has a trigger and every active task has a source or acceptance boundary;
 13. forbidden live-sequencing headings in noncanonical documents fail the checker;
-14. the register holds only the pointer, `IDLE` fields, and task-table rows; and
-15. the global mutation suite passes and the global checker accepts the target's standard config.
+14. the register holds only the pointer, `IDLE` fields, and task-table rows;
+15. the canonical document stays within the contract's word limit;
+16. each fact has one home: the current step only in the `NOW` row, each decision in force in one current
+    document, each step with its own record of completion in its own row, and no ordered list of steps in
+    a current document outside the register;
+17. the repository instruction from apply step 7 is in place and instruction files hold no execution
+    state; and
+18. the global mutation suite passes and the global checker accepts the target's standard config.
 
 Then run only the target repository's relevant final gates. A documentation-only migration does not
 justify unrelated product, database, browser, or deployment checks unless those gates read the changed

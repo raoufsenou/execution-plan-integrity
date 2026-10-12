@@ -105,8 +105,27 @@ Between the markers, every non-blank line is the `NOW` pointer, an `IDLE REASON`
 or a row of one of the two task tables, including its header and divider. Headings, notes, substep tables
 and other prose belong outside the register.
 
-The surrounding document may retain architecture, decisions, phase history, and rationale. Those sections
-must say they are historical when their old status language could be mistaken for live state.
+The canonical document holds the register and only the context needed to act on it now: the objective,
+the decisions in force that live rows cite, and working notes for unfinished tasks, when they fit. The
+whole document stays within 10,000 whitespace-separated words. When a task closes, its full row and its
+working notes move verbatim into its closure proof. Anything else that leaves the canonical document, such
+as file ledgers, phase history, superseded decisions and evidence narratives, moves verbatim to an
+`archive`, `evidence` or `design` document rather than being deleted. Anything a live row cites stays in a
+current document, never only in an archive.
+
+## One home for every fact
+
+Every fact has one home, and every other place cites it instead of copying it:
+
+- the current step, and the repository doing the work when it is not the one that holds the plan, live
+  in the `NOW` row's boundary, never in a separate section;
+- each decision in force lives in one current document, the canonical document when it fits and otherwise
+  a `design` document, and rows cite it;
+- every step that has its own record of completion, such as a fix step an audit's records prove, is its
+  own row, and its closure proof cites that record instead of restating it; an ordered list of steps in a
+  current document outside the register is a second queue; and
+- `archive` documents and the text closure proofs preserve are history, read for context and never
+  followed as instructions.
 
 ## Lossless migration
 
@@ -135,7 +154,8 @@ The proof must match the row's task ID, kind and completion date and must contai
 
 Implementation-like tasks additionally require an exact implementation ledger, reachable integration
 trace and falsification evidence. Non-implementation tasks must track implementation by stable task IDs or
-cite why implementation is not required. The full schema and evidence standard are in
+cite why implementation is not required. A proof written when its task closes also preserves the task's
+full row and working notes verbatim. The full schema and evidence standard are in
 `completion-proof.md`.
 
 ## Enforcement
@@ -152,6 +172,7 @@ The checker must discover the configured plan-like documents and fail when:
 - a noncanonical document contains register markers or a forbidden live-sequencing heading;
 - the register is missing, duplicated, malformed, or empty;
 - the register contains a line that is not the pointer, an `IDLE` field, or a task-table row;
+- the canonical document exceeds 10,000 words;
 - IDs repeat or violate the stable syntax;
 - the pointer and `NOW` row disagree;
 - ordered positions are not contiguous;
@@ -163,6 +184,7 @@ The checker must discover the configured plan-like documents and fail when:
 - required evidence, source, owner, or trigger cells are empty;
 - a `DONE` row lacks a valid matching closure proof;
 - a proof has missing requirements, nonexistent repository evidence or unverified items;
+- a proof's preserved row is not the task's row on one line, or its notes are not lines of text;
 - an implementation-like proof lacks a ledger, integration trace or falsification evidence; or
 - a non-implementation proof neither tracks implementation nor explains why it is not required.
 

@@ -92,8 +92,8 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const verifySection = skill.slice(skill.indexOf('## Mode: verify'), skill.indexOf('## Stop conditions'))
   const verificationNumbers = [...verifySection.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1]))
-  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 15 }, (_, i) => i + 1))) {
-    problems.push('SKILL.md verification matrix must contain ordered proofs 1–15')
+  if (JSON.stringify(verificationNumbers) !== JSON.stringify(Array.from({ length: 18 }, (_, i) => i + 1))) {
+    problems.push('SKILL.md verification matrix must contain ordered proofs 1–18')
   }
   for (const proof of SKILL_VERIFICATION_PROOFS) {
     if (!includesNormalized(skill, proof)) {
@@ -127,6 +127,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     'Exactly one plan-like document has role `canonical`.',
     'The `NOW` pointer has exactly three valid forms:',
     'No item disappears because it was duplicated, stale, inconvenient, or outside the former sequence.',
+    'Every fact has one home, and every other place cites it instead of copying it:',
   ]) {
     if (!includesNormalized(contract, invariant)) problems.push(`contract.md must preserve: ${invariant}`)
   }
@@ -142,6 +143,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
     '## 5. Configure the skill-owned checker',
     '## 6. Reconstruct completion proofs',
     '## 7. Prove failure, then success',
+    '## Upgrade a repository that already uses this skill',
   ]) {
     if (!migration.includes(heading)) problems.push(`migration.md must define ${heading}`)
   }
@@ -168,7 +170,7 @@ export function validateSkill(root = SOURCE_ROOT, { artifactOnly = false } = {})
 
   const checker = readFileSync(join(root, 'assets/checker/check-execution-plan.mjs'), 'utf8')
   const parser = readFileSync(join(root, 'assets/checker/execution-register.mjs'), 'utf8')
-  for (const proof of ['requiredGlobs', 'execution-role:', 'proposed sequencing', 'parseExecutionRegisterText']) {
+  for (const proof of ['requiredGlobs', 'execution-role:', 'proposed sequencing', 'parseExecutionRegisterText', 'CANONICAL_WORD_LIMIT']) {
     if (!checker.includes(proof)) problems.push(`checker template must preserve ${proof}`)
   }
   for (const proof of ['REGISTER_START', 'repeats execution ID', 'first incomplete task', 'has no completion date', 'is not the NOW pointer, IDLE metadata, or a task-table row']) {

@@ -16,16 +16,16 @@ export const ARTIFACT_ENTRIES = Object.freeze([
 export const REQUIRED_ARTIFACT_FILES = ARTIFACT_ENTRIES
 
 export const ARTIFACT_SHA256 = Object.freeze({
-  'SKILL.md': 'f211212cecf656888ec0e2037e318d24e44e686eea1276c4147765568d469f54',
+  'SKILL.md': 'b0b5c363315843f701a38df1c4d5854d520f9ce4b6ef6b35b99256a7a833c98a',
   'agents/openai.yaml': 'd9322ee1351bdce6770eb1994f18a8bb485fc97abdd0bc56e356acc44c3c93cb',
-  'references/contract.md': '1c8184c2210e6432245c4098244ae25ee1ef04907ccc683f298a79aaa2c6f818',
-  'references/migration.md': 'c1d67327c2b15543ef48cf7f421f037db20170329ad9915d0717d707953af11d',
-  'references/report-template.md': '7f82ef40f8366f77105b5ef3323e7223758e8b24503c3567b7a782d461f3b766',
-  'references/completion-proof.md': '0c613ef5f9c0e548f27d54e112176ff06965edf9a34463361f14be7fcd1e1be9',
-  'assets/checker/check-execution-plan.mjs': 'fefaf055696287ff74b42397bcfed60c6f04d0bdb59a864d3bce2ae0a18c6475',
-  'assets/checker/completion-proof.mjs': '9a328c61c65f6daec9fa686b04cf0f52be84f93cdbca7acbc082329b8a28548d',
+  'references/contract.md': '6c68f76075b16ac6ab6649196c9d1f3e21e9980108d413874aa0f111c7b7c58f',
+  'references/migration.md': '4e9717756f2b6774d90e0f5659b9c84fd2ec0333a01fc50a570ab981bbbb20e4',
+  'references/report-template.md': 'b63505bdf6bf442a858ed744e6af12e9877ee389358ee5cdaf040723e9b13d46',
+  'references/completion-proof.md': '4df6b983157edd50b4008c32256f997026b024e99835240bb44da866ee7a2b41',
+  'assets/checker/check-execution-plan.mjs': 'dbb20557c3cd248d16eb6b6ed0ddc13b47bd0ec6386463dc7521dd988e9682a4',
+  'assets/checker/completion-proof.mjs': 'b8dbc8450eda8c852f1ed968368d0893b1f8eb5795dd048d2f1310ed1a97fdda',
   'assets/checker/execution-register.mjs': '9872c4009295e3fb6e4cddce40d10a43b75ae6a93b7d2fbb147a647d52ed446e',
-  'assets/checker/execution-register.test.mjs': 'eaf97ae2a6796fe926b0e0c5071916d67f86bc27ba71e06b6540b9868a80fe7c',
+  'assets/checker/execution-register.test.mjs': '26621f7a20c1a93c9b4fe4041c2a3e2cf5a1c1472851bb10360d0b5616168938',
 })
 
 export const SKILL_VERIFICATION_PROOFS = Object.freeze([
@@ -43,6 +43,9 @@ export const SKILL_VERIFICATION_PROOFS = Object.freeze([
   'every `DEFERRED` task has a trigger and every active task has a source or acceptance boundary;',
   'forbidden live-sequencing headings in noncanonical documents fail the checker;',
   'the register holds only the pointer, `IDLE` fields, and task-table rows;',
+  'the canonical document stays within the contract\'s word limit;',
+  'each fact has one home: the current step only in the `NOW` row, each decision in force in one current',
+  'the repository instruction from apply step 7 is in place and instruction files hold no execution',
   'the global mutation suite passes and the global checker accepts the target\'s standard config.',
 ])
 
@@ -63,5 +66,8 @@ export const REPORT_VERIFICATION_PROOFS = Object.freeze([
   'No closure proof contains an unverified acceptance item',
   'Terminal `NONE` is rejected while ordered work, unordered work, or untracked selected delivery remains',
   'Register holds only the pointer, `IDLE` fields, and task-table rows',
+  'Canonical document stays within the word limit',
+  'Each fact has one home',
+  'Repository instruction is in place and instruction files hold no execution state',
   'Skill-owned mutation suite passes and checker accepts the target config',
 ])

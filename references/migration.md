@@ -19,7 +19,9 @@ Run these phases in order. Do not merge, reorder, or skip them because a reposit
    direction.
 4. **Install the contract mechanically.** Add the standard root config, create the proof directory, add
    task kinds, and migrate the pointer. Preserve every accepted ID, state, order, trigger, and scope. Do not
-   copy checker code or mutation tests into the target repository.
+   copy checker code or mutation tests into the target repository. If the canonical document would exceed
+   the contract's word limit or keep a fact the contract gives one home in more than one place, compact it
+   with the snapshot and rewrite phases of the upgrade section below.
 5. **Reconstruct proofs in ordered-register order.** Freeze requirements first, then inspect current
    definitions, entry points, consumers, durable effects, and focused evidence. Write no proof from old
    completion prose alone. Complete every pre-existing `DONE` proof before the migration task's own proof.
@@ -172,13 +174,58 @@ Use these legacy-proof rules consistently:
 ## 7. Prove failure, then success
 
 Run the mutation tests. They must demonstrate rejection of duplicate IDs, multiple `NOW` rows, a pointer
-mismatch, a queued item before the current item, an unclassified document, a noncanonical register, and
-stray text inside the register.
+mismatch, a queued item before the current item, an unclassified document, a noncanonical register, stray
+text inside the register, and a canonical document over the word limit.
 
 Also demonstrate rejection of a missing closure proof, mismatched task kind, nonexistent evidence path,
 unverified acceptance item, implementation task without integration/falsification, design completion
-without a tracked implementation disposition, `IDLE` without tracked work/reason/resume condition, and
-terminal `NONE` with ordered or unordered work remaining.
+without a tracked implementation disposition, preserved text that is not the task's row or lines of notes,
+`IDLE` without tracked work/reason/resume condition, and terminal `NONE` with ordered or unordered work
+remaining.
 
 Then run the checker against the real repository and the existing relevant final gates. Report the stable
 `NOW` ID, justified `IDLE` state, or strictly verified terminal `NONE` state last.
+
+## Upgrade a repository that already uses this skill
+
+Use these phases instead of the apply state machine when a repository already has a schema-2 config but
+fails the register-content rule or the word limit, or keeps a fact the contract gives one home in more
+than one place. Run every phase with the installed skill's checker and mutation suite; the upgrade is
+complete when that checker passes and every fact has one home, not when the document looks compliant.
+
+1. **Preflight without target edits.** Run the installed checker against the target and compare its
+   findings and word counts with the accepted audit. Record the exact target repository and an edit
+   ledger. If the findings differ from the audit, append a read-only supplement before editing.
+2. **Open the upgrade task.** Append the stable ordered task `EXECUTION-PLAN-COMPACTION` of kind
+   `MIGRATION`, or reuse it when an interrupted upgrade left it unfinished. When the pointer is `IDLE` or
+   `NONE`, make it the sole `NOW` row and remove any `IDLE` fields. When another task is `NOW`, the
+   audit's one decision asks whether the upgrade may preempt it. On explicit direction, insert the upgrade
+   task immediately before it, renumber the rows after it, and make the displaced task `QUEUED` with its
+   scope unchanged. Without that direction, stop: the repository keeps failing the checker, so its current
+   task cannot close.
+3. **Snapshot the whole document.** Copy the canonical document, complete, into a new document that the
+   config classifies as `archive`, adding one dated line that names the document it preserves and says it
+   is not live state. Change only what the checker requires of a noncanonical document: change its role
+   marker to `archive`, remove the two register markers, and reword any heading containing "proposed
+   sequencing" and any `**Remaining, in order:**` label. List every such change in the report. Never
+   overwrite an existing snapshot.
+4. **Rewrite the canonical document.** Reduce it to the register and the context the contract allows; the
+   snapshot already holds everything else, including every line that leaves the register. Anything a live
+   row cites stays in a current document: the canonical document when it fits, otherwise a `design`
+   document, with the row's citation updated to the new location. Give every fact the one home the
+   contract names: the current step moves into its task's row, each decision in force keeps one home that
+   rows cite, and an ordered list of unfinished steps becomes rows only as the accepted audit's crosswalk
+   maps them, while a list of finished steps stays in the snapshot beside the records that prove them.
+   Keep every row's ID, kind, state and scope except where the upgrade task's insertion or that crosswalk
+   changes them. Shorten finished rows only when the document cannot otherwise fit, keeping each
+   completion date as the first date in its last cell.
+5. **Clear instruction files.** Move execution state copied into `AGENTS.md` or similar instruction files,
+   verbatim, into an `archive` document, and leave the instruction from `SKILL.md` apply step 7, in its
+   current wording, in its place.
+6. **Prove, then close.** Leave existing closure proofs untouched. Run the installed mutation suite, the
+   installed checker, and only the repository-native gates that read the changed files. Write the upgrade
+   task's closure proof as `close` requires and mark it `DONE`. Make the displaced task `NOW` again; with
+   no displaced task, compute the pointer as phase 7 of the apply state machine does, restoring the prior
+   `IDLE` fields from the snapshot when they still hold. Rerun the checker after the final state edit.
+
+If an upgrade is interrupted, resume from the upgrade task, its snapshot and the edit ledger.

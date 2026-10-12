@@ -53,6 +53,10 @@ Valid verification kinds are:
 Use the narrowest evidence that can fail for the requirement. A repository-wide green suite may be
 supporting evidence, but it never replaces a missing requirement-specific proof.
 
+When another skill's records already prove a requirement, such as the fix file an audit keeps for one of
+its steps, cite that file as the verification's `record` and say in one line what it shows. Never restate
+those records in the proof.
+
 ## Reachability and falsification
 
 An `IMPLEMENTATION`, `MIGRATION` or `OPERATIONS` task records:
@@ -130,9 +134,21 @@ Store one JSON file per `DONE` task at the configured proof directory as `<TASK-
   ],
   "implementationDisposition": { "status": "DELIVERED" },
   "unverified": [],
-  "outOfScope": []
+  "outOfScope": [],
+  "closedRow": "| 2 | `AUTH-EXAMPLE` | `IMPLEMENTATION` | `NOW` | The public route refuses an expired grant. Current step: the expiry mutation check. | Audit finding 4.1. |",
+  "notes": [
+    "Step 1: the expiry predicate moved into `readGrant`, so every caller shares it.",
+    "Step 2: removing the predicate makes the route test fail."
+  ]
 }
 ```
+
+A proof written when its task closes preserves what leaves the canonical document with it. `closedRow` is
+the task's register row, verbatim and on one line, as it stood before it was reduced to its summary.
+`notes` holds the task's working notes verbatim, one line per entry, leaving out what the proof's other
+fields already record, such as the edit ledger. A proof reconstructed during migration omits both,
+because the migration's snapshot keeps that history. The checker refuses a `closedRow` that is not one
+row naming the task, and `notes` that are not lines of text.
 
 Repository-relative paths in sources, evidence and the implementation ledger must exist. Verification
 commands are evidence records, not commands the checker executes. They may invoke any language or

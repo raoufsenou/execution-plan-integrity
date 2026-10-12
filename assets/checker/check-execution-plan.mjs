@@ -13,6 +13,7 @@ import {
 const ROLES = new Set(['evidence', 'validation', 'design', 'archive'])
 const ROLE_MARKER = /execution-role: (canonical|evidence|validation|design|archive)/g
 const DEFAULT_CONFIG = '.execution-plan-integrity.json'
+export const CANONICAL_WORD_LIMIT = 10000
 const LOCAL_IMPLEMENTATION_GLOBS = [
   '**/check-execution-plan.{js,mjs,cjs,ts}',
   '**/execution-register.{js,mjs,cjs,ts}',
@@ -74,6 +75,21 @@ function matches(root, patterns) {
   return new Set(patterns.flatMap((pattern) => globSync(pattern, { cwd: root })).map(portable))
 }
 
+function wordCount(text) {
+  return text.split(/\s+/).filter(Boolean).length
+}
+
+function formatCount(count) {
+  return count.toLocaleString('en-US')
+}
+
+export function measureCanonicalText(text) {
+  const start = text.indexOf(REGISTER_START)
+  const end = text.indexOf(REGISTER_END)
+  const register = start !== -1 && end > start ? text.slice(start + REGISTER_START.length, end) : ''
+  return { words: wordCount(text), registerWords: wordCount(register) }
+}
+
 export function checkExecutionProject({ root = process.cwd(), configPath = DEFAULT_CONFIG } = {}) {
   const findings = []
   let config
@@ -130,6 +146,10 @@ export function checkExecutionProject({ root = process.cwd(), configPath = DEFAU
   }
 
   const canonicalText = readFileSync(join(root, config.canonical), 'utf8')
+  const { words } = measureCanonicalText(canonicalText)
+  if (words > CANONICAL_WORD_LIMIT) {
+    findings.push(`${config.canonical} has ${formatCount(words)} words; the canonical document must stay within ${formatCount(CANONICAL_WORD_LIMIT)} words`)
+  }
   const register = parseExecutionRegisterText(canonicalText, config.canonical)
   findings.push(...register.findings)
   findings.push(...checkCompletionProofs({
@@ -156,6 +176,16 @@ export function commandPlan(args) {
   return { root, configPath }
 }
 
+function sizeReport(root, configPath) {
+  try {
+    const config = readExecutionConfig(root, configPath)
+    const { words, registerWords } = measureCanonicalText(readFileSync(join(root, config.canonical), 'utf8'))
+    return `${config.canonical} (${formatCount(words)} of ${formatCount(CANONICAL_WORD_LIMIT)} words, ${formatCount(registerWords)} in the register)`
+  } catch {
+    return null
+  }
+}
+
 function main() {
   let plan
   try {
@@ -165,12 +195,13 @@ function main() {
     return 2
   }
   const findings = checkExecutionProject({ root: plan.root, configPath: plan.configPath })
+  const size = sizeReport(plan.root, plan.configPath)
   if (findings.length > 0) {
     process.stderr.write(`Execution-plan integrity failed:\n${findings.map((finding) => `- ${finding}`).join('\n')}\n`)
+    if (size) process.stderr.write(`Canonical size: ${size}\n`)
     return 1
   }
-  const config = readExecutionConfig(plan.root, plan.configPath)
-  process.stdout.write(`Execution-plan integrity passed: ${config.canonical}\n`)
+  process.stdout.write(`Execution-plan integrity passed: ${size}\n`)
   return 0
 }
 

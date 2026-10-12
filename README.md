@@ -7,6 +7,9 @@ mechanically enforced execution authority without discarding their history.
 
 - one canonical execution register;
 - a register that holds only the pointer, `IDLE` fields, and task-table rows;
+- a canonical document of at most 10,000 words, with its history kept in archive documents and closure
+  proofs;
+- one home for every fact, such as the current step in the `NOW` row;
 - permanent semantic task IDs;
 - an explicit kind for every task;
 - exactly one `NOW` task, a justified `IDLE` state, or a terminal `NONE` state;

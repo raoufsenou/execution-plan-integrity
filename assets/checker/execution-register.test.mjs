@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import test, { afterEach } from 'node:test'
-import { checkExecutionProject } from './check-execution-plan.mjs'
+import { CANONICAL_WORD_LIMIT, checkExecutionProject, measureCanonicalText } from './check-execution-plan.mjs'
 import { checkExecutionRegisterText } from './execution-register.mjs'
 
 const temporaryRoots = []
@@ -141,6 +141,25 @@ test('rejects a repository-local checker or mutation-suite copy', () => {
   assert.ok(findings.includes(
     'check-execution-plan.mjs duplicates the global execution-plan-integrity implementation',
   ))
+})
+
+test('counts canonical and register words as whitespace-separated tokens', () => {
+  const text = 'Intro words here.\n<!-- execution-register:start -->\n`NOW`: `NONE`\n'
+    + '<!-- execution-register:end -->\nTail\n'
+  assert.deepEqual(measureCanonicalText(text), { words: 12, registerWords: 2 })
+})
+
+test('accepts a canonical document at the word limit and rejects one word more', () => {
+  const root = fixture()
+  const path = join(root, 'docs/execution-plan.md')
+  const text = readFileSync(path, 'utf8')
+  const padding = CANONICAL_WORD_LIMIT - measureCanonicalText(text).words
+  writeFileSync(path, `${text}${'word '.repeat(padding)}\n`)
+  assert.deepEqual(checkExecutionProject({ root }), [])
+  writeFileSync(path, `${text}${'word '.repeat(padding + 1)}\n`)
+  assert.deepEqual(checkExecutionProject({ root }), [
+    'docs/execution-plan.md has 10,001 words; the canonical document must stay within 10,000 words',
+  ])
 })
 
 test('rejects missing completion evidence and deferred triggers', () => {
@@ -337,6 +356,44 @@ test('rejects mismatched, nonexistent, and unverified proof claims', () => {
   assert.ok(findings.includes('docs/execution-proofs/TASK-ONE.json taskKind DESIGN does not match IMPLEMENTATION'))
   assert.ok(findings.includes('TASK-ONE requirement 1 evidence 1 does not exist: src/does-not-exist.mjs'))
   assert.ok(findings.includes('docs/execution-proofs/TASK-ONE.json has 1 unverified acceptance item(s)'))
+})
+
+test('accepts a closure proof that preserves its task row and working notes', () => {
+  const root = fixture()
+  const proof = completionProof({
+    closedRow: '| 1 | `TASK-ONE` | `IMPLEMENTATION` | `NOW` | Earlier work. Current step: its focused test. | Audit finding. |',
+    notes: ['Step 1: the function returns its value.', '', 'Step 2: the focused test fails without it.'],
+  })
+  writeFileSync(join(root, 'docs/execution-proofs/TASK-ONE.json'), `${JSON.stringify(proof, null, 2)}\n`)
+  assert.deepEqual(checkExecutionProject({ root }), [])
+})
+
+test('rejects preserved text that is not the task row or lines of notes', () => {
+  const root = fixture()
+  const proofPath = join(root, 'docs/execution-proofs/TASK-ONE.json')
+  const rowMessage = "docs/execution-proofs/TASK-ONE.json closedRow must be the task's register row on one line"
+  const notesMessage = 'docs/execution-proofs/TASK-ONE.json notes must be a non-empty array of single lines of text'
+
+  writeFileSync(proofPath, `${JSON.stringify(completionProof({
+    closedRow: '| 1 | `TASK-ONE` | Earlier work. |\n| 2 | `TASK-TWO` | Current work. |',
+    notes: 'Step 1 and step 2 in one string.',
+  }), null, 2)}\n`)
+  const multiline = checkExecutionProject({ root })
+  assert.ok(multiline.includes(rowMessage))
+  assert.ok(multiline.includes(notesMessage))
+
+  writeFileSync(proofPath, `${JSON.stringify(completionProof({
+    closedRow: '| 2 | `TASK-TWO` | `IMPLEMENTATION` | `NOW` | Current work. | Audit finding. |',
+    notes: ['Step 1.\nStep 2.'],
+  }), null, 2)}\n`)
+  const foreign = checkExecutionProject({ root })
+  assert.ok(foreign.includes('docs/execution-proofs/TASK-ONE.json closedRow does not name TASK-ONE'))
+  assert.ok(foreign.includes(notesMessage))
+
+  writeFileSync(proofPath, `${JSON.stringify(completionProof({ closedRow: 'Earlier work.', notes: [] }), null, 2)}\n`)
+  const prose = checkExecutionProject({ root })
+  assert.ok(prose.includes(rowMessage))
+  assert.ok(prose.includes(notesMessage))
 })
 
 test('rejects implementation completion without reachability or falsification', () => {
